@@ -1,4 +1,5 @@
 import { createRouter, createWebHashHistory } from 'vue-router'
+import { isGuest } from '../utils/session'
 
 const routes = [
   {
@@ -57,6 +58,11 @@ router.beforeEach((to, from, next) => {
     return
   }
   if (authPages.includes(to.name) && token) {
+    next({ name: 'Dashboard' })
+    return
+  }
+  // 游客没有设备管理权限，直接输地址也进不去
+  if (to.name === 'Devices' && isGuest.value) {
     next({ name: 'Dashboard' })
     return
   }

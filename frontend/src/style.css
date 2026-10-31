@@ -346,6 +346,23 @@ body {
   transition: all 0.3s ease;
 }
 
+/* 同一行的卡片拉齐到等高，短的那张补白而不是参差 */
+.charts-grid > div {
+  display: flex;
+  align-items: stretch;
+}
+
+.charts-grid > div > .n-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 卡片内容区跟着一起撑开，内部小块才有空间分布 */
+.charts-grid > div > .n-card > .n-card__content {
+  flex: 1;
+}
+
 .hover-effect:hover {
   transform: translateY(-4px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);

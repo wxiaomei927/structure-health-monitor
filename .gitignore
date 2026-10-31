@@ -28,3 +28,7 @@ docs/
 
 # 浏览器自动化调试记录
 .playwright-cli/
+.playwright/
+*.probe.cjs
+shot_*.png
+guest_*.png

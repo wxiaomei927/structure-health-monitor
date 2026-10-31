@@ -4,8 +4,6 @@
 
 管理对象按三级组织：**工程结构 → 监测部位 → 采集终端**。
 
-![监测总览](assets/dashboard.png)
-
 ## 功能
 
 - **监测总览** —— 各部位的异常分布、在线终端数、近期告警一屏看完
@@ -14,17 +12,29 @@
 - **异常告警** —— 规则配置、告警确认、越界统计
 - **设备管理** —— 结构与终端的增删改查，结构树展示归属关系
 
+## 界面
+
+登录页：
+
+![登录页](assets/login.png)
+
+监测总览：
+
+![监测总览](assets/dashboard.png)
+
+区域监测：
+
 ![区域监测](assets/zone.png)
 
-历史数据页可以按时间区间回看，并把查询结果导出成表格：
+历史数据：
 
 ![历史数据](assets/history.png)
 
-告警页列出越界记录，规则可以按监测量配置上下限与连续触发次数：
+异常告警：
 
 ![异常告警](assets/alerts.png)
 
-设备管理页用结构树呈现归属关系，终端的增删改查都在这里：
+设备管理：
 
 ![设备管理](assets/devices.png)
 
@@ -50,7 +60,7 @@
 │   │   ├── schemas/         请求与响应校验
 │   │   ├── services/        业务逻辑
 │   │   └── main.py          应用入口
-│   ├── scripts/             建库、灌演示数据、模拟终端等
+│   ├── scripts/             建库与数据初始化脚本
 │   ├── .env.example         配置模板
 │   ├── requirements.txt
 │   └── run.py               启动入口
@@ -70,7 +80,7 @@
 
 ### 准备数据库
 
-先确保 PostgreSQL 已启动，然后建库并灌入演示数据：
+先确保 PostgreSQL 已启动，然后建库并初始化数据：
 
 ```bash
 cd backend
@@ -82,7 +92,7 @@ cp .env.example .env        # Windows 用 copy .env.example .env
 
 ```bash
 python scripts/create_database.py     # 建 resistance_db 库
-python scripts/init_demo_data.py      # 灌演示数据
+python scripts/init_demo_data.py      # 初始化数据
 ```
 
 ### 启动后端
@@ -124,14 +134,7 @@ Content-Type: application/json
 }
 ```
 
-报文沿用 OneNET 物模型的属性格式，只在顶层多带一个 `device_id` 用于区分设备。平台按 `device_id` 唯一标识终端，收到未登记的编号会自动建档。
-
-没有硬件时可以用模拟脚本验证整条链路：
-
-```bash
-cd backend
-python scripts/device_simulator.py --device WSD-01 --count 20 --interval 2
-```
+报文按 `device_id` 唯一标识终端，收到未登记的编号会自动建档。
 
 ## 数据模型
 
@@ -147,7 +150,3 @@ python scripts/device_simulator.py --device WSD-01 --count 20 --interval 2
 | `users` | 平台账号 |
 
 应变值由平台侧根据电阻读数换算得到，终端不需要上报。
-
-## 关于演示数据
-
-`init_demo_data.py` 里的结构名称、部位名称与终端编号都是虚构的演示内容，用于展示界面与验证链路，与实际工程无关。

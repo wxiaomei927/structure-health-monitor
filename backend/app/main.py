@@ -14,7 +14,7 @@ from app.api.router import api_router
 from app.core.config import get_settings
 from app.db.base import Base
 from app.db.session import engine, SessionLocal
-from app.services.auth_service import ensure_admin_user, get_current_user
+from app.services.auth_service import ensure_admin_user, ensure_guest_user, get_current_user
 
 settings = get_settings()
 
@@ -29,6 +29,7 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
         with SessionLocal() as db:
             ensure_admin_user(db)
+            ensure_guest_user(db)
         app.state.db_ready = True
     except Exception as exc:
         app.state.db_ready = False

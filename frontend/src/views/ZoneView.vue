@@ -33,7 +33,7 @@
     <template v-else>
       <!-- 2. 部位概况 + 当前读数 -->
       <div class="charts-section">
-        <n-grid :x-gap="24" :y-gap="24" cols="1 900:3" class="charts-grid">
+        <n-grid :x-gap="24" :y-gap="24" cols="1 900:2" class="charts-grid">
           <n-grid-item>
             <n-card title="当前读数" :bordered="false" class="chart-card">
               <template #header-extra>
@@ -42,14 +42,16 @@
               <div class="readout-grid">
                 <div v-for="item in readouts" :key="item.label" class="readout-item">
                   <span class="readout-label">{{ item.label }}</span>
-                  <strong class="readout-value mono">{{ item.value }}</strong>
-                  <span class="readout-unit">{{ item.unit }}</span>
+                  <div class="readout-line">
+                    <strong class="readout-value mono">{{ item.value }}</strong>
+                    <span class="readout-unit">{{ item.unit }}</span>
+                  </div>
                 </div>
               </div>
             </n-card>
           </n-grid-item>
 
-          <n-grid-item :span="2">
+          <n-grid-item>
             <n-card title="部位概况" :bordered="false" class="chart-card">
               <template #header-extra>
                 <n-tag type="info" size="small" round>{{ zone?.code }}</n-tag>
@@ -149,7 +151,7 @@
                   <strong>{{ records.length }}</strong>
                 </div>
               </div>
-              <div ref="trendChartRef" class="chart-container"></div>
+              <div ref="trendChartRef" class="trend-chart"></div>
             </n-card>
           </n-grid-item>
         </n-grid>
@@ -483,13 +485,15 @@ onBeforeUnmount(() => {
 .readout-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
+  gap: 14px;
+  height: 100%;
 }
 
 .readout-item {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  justify-content: space-between;
+  gap: 6px;
   padding: 12px 14px;
   border-radius: 12px;
   background: #f7f8fa;
@@ -501,10 +505,17 @@ onBeforeUnmount(() => {
   color: #86909c;
 }
 
+/* 数值和单位并排，单位不再掉到下一行 */
+.readout-line {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
 .readout-value {
   font-size: 22px;
   color: #1d2129;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .readout-unit {
@@ -517,13 +528,15 @@ onBeforeUnmount(() => {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
+  height: 100%;
 }
 
 .profile-item {
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 4px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: 12px;
   background: #f7f8fa;
   border: 1px solid #eef0f3;
@@ -547,6 +560,12 @@ onBeforeUnmount(() => {
 
 .heatmap-skeleton {
   height: 420px;
+}
+
+/* 热力图和趋势图取同一高度，两张卡片才能齐平 */
+.trend-chart {
+  height: 420px;
+  width: 100%;
 }
 
 .imaging-canvas-wrap {

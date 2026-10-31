@@ -33,8 +33,8 @@
             style="width: 320px"
           />
           <n-button type="primary" size="medium" :loading="loading" @click="handleQuery">检索</n-button>
-          <n-button size="medium" secondary @click="handleExport('xlsx')">导出 Excel</n-button>
-          <n-button size="medium" quaternary @click="handleExport('csv')">导出 CSV</n-button>
+          <n-button v-if="!isGuest" size="medium" secondary @click="handleExport('xlsx')">导出 Excel</n-button>
+          <n-button v-if="!isGuest" size="medium" quaternary @click="handleExport('csv')">导出 CSV</n-button>
         </div>
       </div>
     </n-card>
@@ -111,6 +111,7 @@ import { NIcon, useMessage } from 'naive-ui'
 import { dateZhCN } from 'naive-ui'
 import { buildLineOption, echarts, formatClock, formatShort, seriesColors } from '../utils/chart'
 import { deviceApi, downloadFile, measurementApi } from '../api'
+import { isGuest } from '../utils/session'
 
 const message = useMessage()
 const query = reactive({ device_id: null, range: null })

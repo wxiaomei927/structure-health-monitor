@@ -1,4 +1,5 @@
 import axios from 'axios'
+import { clearSession } from '../utils/session'
 
 const http = axios.create({
   baseURL: '/api/v1',
@@ -20,9 +21,7 @@ http.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     if (status === 401) {
-      localStorage.removeItem('access_token')
-      localStorage.removeItem('username')
-      localStorage.removeItem('display_name')
+      clearSession()
       if (window.location.hash !== '#/login') {
         window.location.hash = '#/login'
       }
@@ -34,6 +33,7 @@ http.interceptors.response.use(
 export const authApi = {
   login: (payload) => http.post('/auth/login', payload),
   register: (payload) => http.post('/auth/register', payload),
+  guest: () => http.post('/auth/guest'),
   me: () => http.get('/auth/me')
 }
 

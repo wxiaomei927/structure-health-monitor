@@ -9,8 +9,10 @@ from sqlalchemy.orm import Session
 from app.db.session import get_db
 from app.schemas.measurement import LoginRequest, LoginResponse, RegisterRequest
 from app.services.auth_service import (
+    GUEST_USERNAME,
     authenticate_user,
     create_access_token,
+    create_guest_token,
     get_current_user,
     register_user,
 )
@@ -54,6 +56,21 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
         username=user.username,
         display_name=user.display_name,
         role=user.role,
+    )
+
+
+@router.post("/guest", response_model=LoginResponse, summary="以游客身份进入")
+def enter_as_guest(db: Session = Depends(get_db)):
+    """演示用入口，不需要账号密码，只能看不能改"""
+    stmt = select(User).where(User.username == GUEST_USERNAME)
+    guest = db.execute(stmt).scalars().first()
+    if guest is None:
+        raise HTTPException(status_code=503, detail="游客账号尚未初始化")
+    return LoginResponse(
+        access_token=create_guest_token(guest),
+        username=guest.username,
+        display_name=guest.display_name,
+        role=guest.role,
     )
 
 

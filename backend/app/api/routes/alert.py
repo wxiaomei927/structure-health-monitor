@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
-from app.models.entities import AlertRecord
+from app.models.entities import AlertRecord, User
 from app.schemas.alert import AlertRecordOut, AlertRuleCreate, AlertRuleOut
 from app.services.alert_service import ALERT_METRICS, AlertService
+from app.services.auth_service import require_editor
 
 router = APIRouter(prefix="/alerts", tags=["alerts"])
 
@@ -31,6 +32,7 @@ def acknowledge_record(
     record_id: int,
     operator: str = Query(default="admin"),
     db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
 ):
     record = db.get(AlertRecord, record_id)
     if record is None:
@@ -42,6 +44,7 @@ def acknowledge_record(
 def reopen_record(
     record_id: int,
     db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
 ):
     record = db.get(AlertRecord, record_id)
     if record is None:
@@ -74,7 +77,11 @@ def list_rules(
 
 
 @router.post("/rules", response_model=AlertRuleOut, summary="新建告警规则")
-def create_rule(payload: AlertRuleCreate, db: Session = Depends(get_db)):
+def create_rule(
+    payload: AlertRuleCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     if payload.metric not in ALERT_METRICS:
         raise HTTPException(
             status_code=400,
@@ -92,7 +99,11 @@ def create_rule(payload: AlertRuleCreate, db: Session = Depends(get_db)):
 
 
 @router.delete("/rules/{rule_id}", summary="删除告警规则")
-def delete_rule(rule_id: int, db: Session = Depends(get_db)):
+def delete_rule(
+    rule_id: int,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     from app.models.entities import AlertRule
 
     service = AlertService(db)

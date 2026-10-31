@@ -38,20 +38,36 @@
           />
         </n-form-item>
 
-        <n-form-item v-if="isRegister" path="password2" label="确认密码">
-          <n-input
-            v-model:value="form.password2"
-            type="password"
-            placeholder="再次输入密码"
-            show-password-on="click"
-            autocomplete="new-password"
-          />
-        </n-form-item>
+      <n-form-item v-if="isRegister" path="password2" label="确认密码">
+        <n-input
+          v-model:value="form.password2"
+          type="password"
+          placeholder="再次输入密码"
+          show-password-on="click"
+          autocomplete="new-password"
+        />
+      </n-form-item>
 
         <n-button type="primary" block :loading="loading" @click="handleSubmit">
           {{ isRegister ? '注 册' : '登 录' }}
         </n-button>
       </n-form>
+
+      <div class="guest-entry">
+        <div class="guest-divider">
+          <span>或</span>
+        </div>
+        <n-button
+          block
+          secondary
+          class="guest-button"
+          :loading="guestLoading"
+          @click="handleGuest"
+        >
+          以游客身份浏览
+        </n-button>
+        <p class="guest-hint">游客可以查看平台全部展示数据，不能修改任何内容</p>
+      </div>
 
       <div class="auth-switch">
         <template v-if="isRegister">
@@ -70,6 +86,7 @@ import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useMessage } from 'naive-ui'
 import { authApi } from '../api'
+import { setSession } from '../utils/session'
 
 const route = useRoute()
 const router = useRouter()
@@ -77,6 +94,7 @@ const message = useMessage()
 
 const formRef = ref(null)
 const loading = ref(false)
+const guestLoading = ref(false)
 
 const isRegister = computed(() => route.name === 'Register')
 
@@ -132,9 +150,7 @@ async function handleSubmit() {
     }
 
     const data = await authApi.login({ username: form.username, password: form.password })
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('username', data.username)
-    localStorage.setItem('display_name', data.display_name || data.username)
+    setSession(data)
     message.success('登录成功')
     router.push({ name: 'Dashboard' })
   } catch (err) {
@@ -142,6 +158,21 @@ async function handleSubmit() {
     message.error(detail)
   } finally {
     loading.value = false
+  }
+}
+
+async function handleGuest() {
+  guestLoading.value = true
+  try {
+    const data = await authApi.guest()
+    setSession(data)
+    message.success('已进入游客模式')
+    router.push({ name: 'Dashboard' })
+  } catch (err) {
+    const detail = err?.response?.data?.detail || '进入失败，请稍后重试'
+    message.error(detail)
+  } finally {
+    guestLoading.value = false
   }
 }
 </script>
@@ -222,6 +253,48 @@ async function handleSubmit() {
   font-weight: 600;
   color: var(--ink-900);
   margin: 14px 0 22px;
+}
+
+.guest-entry {
+  margin-top: 18px;
+}
+
+/* 游客入口要一眼能看见，用描边主色而不是灰底次级 */
+.guest-button {
+  color: #0e42d2 !important;
+  border: 1px solid #165dff !important;
+  background-color: #ffffff !important;
+}
+
+.guest-button:hover {
+  color: #0e42d2 !important;
+  border-color: #0e42d2 !important;
+  background-color: #f2f6ff !important;
+}
+
+.guest-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  color: var(--ink-400);
+  font-size: var(--text-sm);
+}
+
+.guest-divider::before,
+.guest-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--ink-100);
+}
+
+.guest-hint {
+  margin: 10px 0 0;
+  text-align: center;
+  font-size: var(--text-xs);
+  color: var(--ink-400);
+  line-height: 1.6;
 }
 
 .auth-switch {

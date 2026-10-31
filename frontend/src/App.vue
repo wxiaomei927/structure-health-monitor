@@ -34,9 +34,12 @@
                 </div>
 
                 <div class="header-right">
+                  <n-tag v-if="isGuest" type="info" size="small" round class="guest-badge">
+                    游客模式
+                  </n-tag>
                   <n-dropdown :options="userOptions" @select="handleUserAction">
                     <button class="user-trigger">
-                      <span class="user-initial">{{ userInitial }}</span>
+                      <span class="user-initial" :class="{ 'user-initial-guest': isGuest }">{{ userInitial }}</span>
                       <span class="user-name">{{ displayName }}</span>
                       <n-icon :size="14"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path fill="currentColor" d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/></svg></n-icon>
                     </button>
@@ -65,21 +68,24 @@ import { RouterView, useRoute, useRouter } from 'vue-router'
 import { NIcon } from 'naive-ui'
 import { zhCN } from 'naive-ui'
 import { authApi } from './api'
+import { clearSession, isGuest, state as sessionState } from './utils/session'
 
 const route = useRoute()
 const router = useRouter()
 
-const displayName = ref(localStorage.getItem('display_name') || '')
+const displayName = ref(sessionState.displayName || '')
 
 const isLoginPage = computed(() => ['Login', 'Register'].includes(route.name))
 
-const navItems = [
-  { key: 'Dashboard', label: '监测总览', path: '/' },
-  { key: 'Zone', label: '区域监测', path: '/zone' },
-  { key: 'History', label: '历史数据', path: '/history' },
-  { key: 'Alerts', label: '异常告警', path: '/alerts' },
-  { key: 'Devices', label: '设备管理', path: '/devices' }
-]
+const navItems = computed(() =>
+  [
+    { key: 'Dashboard', label: '监测总览', path: '/' },
+    { key: 'Zone', label: '区域监测', path: '/zone' },
+    { key: 'History', label: '历史数据', path: '/history' },
+    { key: 'Alerts', label: '异常告警', path: '/alerts' },
+    { key: 'Devices', label: '设备管理', path: '/devices' }
+  ].filter((item) => item.key !== 'Devices' || !isGuest.value)
+)
 
 const themeOverrides = {
   common: {
@@ -130,15 +136,22 @@ const themeOverrides = {
   }
 }
 
-const userOptions = [{ label: '退出登录', key: 'logout' }]
+const userOptions = computed(() =>
+  isGuest.value
+    ? [{ label: '切换为账号登录', key: 'switch' }]
+    : [{ label: '退出登录', key: 'logout' }]
+)
 
 const userInitial = computed(() => (displayName.value || 'A').charAt(0))
 
 function handleUserAction(key) {
+  if (key === 'switch') {
+    clearSession()
+    router.push({ name: 'Login' })
+    return
+  }
   if (key !== 'logout') return
-  localStorage.removeItem('access_token')
-  localStorage.removeItem('username')
-  localStorage.removeItem('display_name')
+  clearSession()
   router.push({ name: 'Login' })
 }
 
@@ -148,7 +161,11 @@ watch(
   () => route.name,
   (name) => {
     if (!name || name === 'Login' || name === 'Register') return
-    if (!localStorage.getItem('access_token')) return
+    if (!sessionState.token) return
+    if (isGuest.value) {
+      displayName.value = '游客'
+      return
+    }
     authApi.me()
       .then((info) => {
         if (info?.display_name) {
@@ -282,6 +299,14 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.user-initial-guest {
+  background: var(--ink-500);
+}
+
+.guest-badge {
+  margin-right: var(--space-1);
 }
 
 .user-name {

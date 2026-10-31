@@ -21,7 +21,7 @@
             <n-radio-button value="open">未处理</n-radio-button>
               <n-radio-button value="done">已处理</n-radio-button>
           </n-radio-group>
-          <n-button type="primary" size="medium" @click="openRuleModal">新建规则</n-button>
+          <n-button v-if="!isGuest" type="primary" size="medium" @click="openRuleModal">新建规则</n-button>
         </div>
       </div>
     </n-card>
@@ -38,6 +38,7 @@
             </template>
             <div class="flow-note">
               读数越出正常范围时自动生成一条记录，现场核查后标记为已处理；处理错了可以撤销。
+              <template v-if="isGuest">游客模式下只能查看，不能标记处理状态。</template>
             </div>
             <div class="chart-summary-grid">
               <div class="summary-chip">
@@ -69,6 +70,9 @@
             <template #header-extra>
               <n-tag type="info" size="small" round> {{ rules.length }} 条规则</n-tag>
             </template>
+            <div class="flow-note">
+              每条规则规定一个监测量的正常范围，连续若干次越界才生成告警，避免单次波动误报。
+            </div>
             <div class="chart-summary-grid">
               <div class="summary-chip">
                 <span>生效规则</span>
@@ -189,6 +193,7 @@ import { computed, h, nextTick, onBeforeUnmount, onMounted, reactive, ref } from
 import { NButton, NIcon, NSpace, NTag, useMessage } from 'naive-ui'
 import { alertApi, structureApi } from '../api'
 import { buildBarOption, echarts, formatShort } from '../utils/chart'
+import { isGuest } from '../utils/session'
 
 const message = useMessage()
 const loading = ref(true)
@@ -221,34 +226,37 @@ const metricOptions = [
   { label: '应变 (με)', value: 'strain_ue' }
 ]
 
-const recordColumns = [
-  {
-    title: '级别',
-    key: 'severity',
-    width: 80,
-    render: (row) =>
-      h(
-        NTag,
-        { type: row.severity === 'critical' ? 'error' : 'warning', size: 'small', round: true },
-        { default: () => (row.severity === 'critical' ? '严重' : '预警') }
-      )
-  },
-  { title: '告警内容', key: 'message' },
-  { title: '终端', key: 'device_id', width: 90 },
-  {
-    title: '状态',
-    key: 'state',
-    width: 150,
-    render: (row) =>
-      row.acknowledged_at
-        ? h('div', { style: 'display:flex;flex-direction:column;gap:2px' }, [
-            h(NTag, { type: 'default', size: 'small', round: true }, { default: () => '已处理' }),
-            h('span', { style: 'font-size:13px;color:#86909C' },
-              { default: () => `${row.acknowledged_by || 'admin'} 于 ${formatShort(row.acknowledged_at)}` })
-          ])
-        : h(NTag, { type: 'warning', size: 'small', round: true }, { default: () => '待处理' })
-  },
-  {
+const recordColumns = computed(() => {
+  const columns = [
+    {
+      title: '级别',
+      key: 'severity',
+      width: 80,
+      render: (row) =>
+        h(
+          NTag,
+          { type: row.severity === 'critical' ? 'error' : 'warning', size: 'small', round: true },
+          { default: () => (row.severity === 'critical' ? '严重' : '预警') }
+        )
+    },
+    { title: '告警内容', key: 'message' },
+    { title: '终端', key: 'device_id', width: 90 },
+    {
+      title: '状态',
+      key: 'state',
+      width: 150,
+      render: (row) =>
+        row.acknowledged_at
+          ? h('div', { style: 'display:flex;flex-direction:column;gap:2px' }, [
+              h(NTag, { type: 'default', size: 'small', round: true }, { default: () => '已处理' }),
+              h('span', { style: 'font-size:13px;color:#86909C' },
+                { default: () => `${row.acknowledged_by || 'admin'} 于 ${formatShort(row.acknowledged_at)}` })
+            ])
+          : h(NTag, { type: 'warning', size: 'small', round: true }, { default: () => '待处理' })
+    }
+  ]
+  if (isGuest.value) return columns
+  columns.push({
     title: '操作',
     key: 'action',
     width: 175,
@@ -273,8 +281,9 @@ const recordColumns = [
           )
         ]
       })
-  }
-]
+  })
+  return columns
+})
 
 const ruleColumns = [
   { title: '规则名称', key: 'name', width: 120 },

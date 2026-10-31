@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import secrets
 import sys
 from datetime import datetime, timedelta
 from typing import Optional
 
 import bcrypt
 import jwt
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -19,7 +20,12 @@ settings = get_settings()
 
 # 默认签发 12 小时
 TOKEN_EXPIRE_HOURS = 12
+# 游客令牌单独给短时效，够看一遍演示数据
+GUEST_TOKEN_EXPIRE_HOURS = 2
 ALGORITHM = "HS256"
+
+GUEST_USERNAME = "guest"
+GUEST_ROLE = "guest"
 
 bearer_scheme = HTTPBearer(auto_error=False)
 
@@ -42,6 +48,17 @@ def create_access_token(user: User) -> str:
         "sub": user.username,
         "uid": user.id,
         "role": user.role,
+        "exp": expire_at,
+    }
+    return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
+
+
+def create_guest_token(user: User) -> str:
+    expire_at = datetime.now() + timedelta(hours=GUEST_TOKEN_EXPIRE_HOURS)
+    payload = {
+        "sub": user.username,
+        "uid": user.id,
+        "role": GUEST_ROLE,
         "exp": expire_at,
     }
     return jwt.encode(payload, settings.secret_key, algorithm=ALGORITHM)
@@ -91,6 +108,16 @@ def require_login(user: User = Depends(get_current_user)) -> User:
     return user
 
 
+def require_editor(user: User = Depends(get_current_user)) -> User:
+    """游客只能看，写操作一律拦下"""
+    if user.role == GUEST_ROLE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="游客模式下不能修改数据，请登录账号后操作",
+        )
+    return user
+
+
 def require_admin(user: User = Depends(get_current_user)) -> User:
     if user.role != "admin":
         raise HTTPException(
@@ -133,6 +160,23 @@ def ensure_admin_user(db: Session) -> None:
             password_hash=hash_password(settings.admin_password),
             display_name="管理员",
             role="admin",
+        )
+    )
+    db.commit()
+
+
+def ensure_guest_user(db: Session) -> None:
+    """游客账号固定存在，密码随机生成，没有任何人能拿它登录"""
+    stmt = select(User).where(User.username == GUEST_USERNAME)
+    exists = db.execute(stmt).scalars().first()
+    if exists is not None:
+        return
+    db.add(
+        User(
+            username=GUEST_USERNAME,
+            password_hash=hash_password(secrets.token_urlsafe(32)),
+            display_name="访客",
+            role=GUEST_ROLE,
         )
     )
     db.commit()

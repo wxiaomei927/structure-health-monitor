@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.session import get_db
+from app.models.entities import User
 from app.schemas.structure import (
     ImagingIn,
     ImagingOut,
@@ -14,6 +15,7 @@ from app.schemas.structure import (
     ZoneOut,
     ZoneUpdate,
 )
+from app.services.auth_service import require_editor
 from app.services.imaging_service import ImagingService
 from app.services.structure_service import StructureService
 
@@ -26,7 +28,11 @@ def list_structures(db: Session = Depends(get_db)):
 
 
 @router.post("", response_model=StructureOut, summary="登记被监测结构")
-def create_structure(payload: StructureCreate, db: Session = Depends(get_db)):
+def create_structure(
+    payload: StructureCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     service = StructureService(db)
     if service.get_structure(payload.code) is not None:
         raise HTTPException(status_code=409, detail=f"结构编号 {payload.code} 已存在")
@@ -42,7 +48,11 @@ def list_zones(
 
 
 @router.post("/zones", response_model=ZoneOut, summary="登记测区")
-def create_zone(payload: ZoneCreate, db: Session = Depends(get_db)):
+def create_zone(
+    payload: ZoneCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     service = StructureService(db)
     if service.get_zone(payload.code) is not None:
         raise HTTPException(status_code=409, detail=f"测区编号 {payload.code} 已存在")
@@ -60,7 +70,12 @@ def get_zone(zone_code: str, db: Session = Depends(get_db)):
 
 
 @router.put("/zones/{zone_code}", response_model=ZoneOut, summary="修改测区信息")
-def update_zone(zone_code: str, payload: ZoneUpdate, db: Session = Depends(get_db)):
+def update_zone(
+    zone_code: str,
+    payload: ZoneUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     service = StructureService(db)
     zone = service.get_zone(zone_code)
     if zone is None:
@@ -71,7 +86,11 @@ def update_zone(zone_code: str, payload: ZoneUpdate, db: Session = Depends(get_d
 
 
 @router.delete("/zones/{zone_code}", summary="删除测区")
-def delete_zone(zone_code: str, db: Session = Depends(get_db)):
+def delete_zone(
+    zone_code: str,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     service = StructureService(db)
     zone = service.get_zone(zone_code)
     if zone is None:
@@ -84,7 +103,12 @@ def delete_zone(zone_code: str, db: Session = Depends(get_db)):
 
 
 @router.put("/{structure_code}", response_model=StructureOut, summary="修改结构信息")
-def update_structure(structure_code: str, payload: StructureUpdate, db: Session = Depends(get_db)):
+def update_structure(
+    structure_code: str,
+    payload: StructureUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     service = StructureService(db)
     structure = service.get_structure(structure_code)
     if structure is None:
@@ -136,7 +160,11 @@ def imaging_history(
 
 
 @imaging_router.post("", summary="上传一次成像结果")
-def upload_imaging(payload: ImagingIn, db: Session = Depends(get_db)):
+def upload_imaging(
+    payload: ImagingIn,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_editor),
+):
     service = ImagingService(db)
     zone = StructureService(db).get_zone(payload.zone_code)
     if zone is None:
